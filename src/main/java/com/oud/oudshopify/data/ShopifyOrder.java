@@ -38,7 +38,7 @@ public class ShopifyOrder {
     private List<ShopifyFulfillment> fulfillment;
 
     public boolean isConfirmed() {
-        return getTags().contains("confirmed");
+        return tagsContainAny(new String[]{"confirmed", "Confirmed", "Confirm", "confirm"});
     }
 
     public String getPhoneNumber() {

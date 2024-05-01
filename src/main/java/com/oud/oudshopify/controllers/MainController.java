@@ -245,7 +245,7 @@ public class MainController {
         for (ShopifyOrder order : ordersTableView.getItems()) {
             if (pickedOrdersMap.getOrDefault(order.getName(), false)) {
                 for (ShopifyItem item : order.getItems()) {
-                    countMap.put(item.getName(), countMap.getOrDefault(item.getName(), 0) + 1);
+                    countMap.put(item.getName(), countMap.getOrDefault(item.getName(), 0) + item.getQuantity());
                 }
                 if (!order.isConfirmed()) {
                     unConfirmedOrders += 1;

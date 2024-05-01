@@ -3,6 +3,7 @@ module com.oud.oudshopify {
     requires javafx.fxml;
     requires java.net.http;
     requires mapdb;
+    requires htmlunit;
     requires com.google.gson;
     requires MaterialFX;
     requires static lombok;

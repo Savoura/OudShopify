@@ -15,6 +15,9 @@
     <children>
         <CustomTextField fx:id="shopifyApiTextField" promptText="Shopify API Key"/>
         <CustomTextField fx:id="shopifyStoreUrlTextField" promptText="Shopify Store URL"/>
+
+        <CustomTextField fx:id="swingUsernameTextField" promptText="Swing Username"/>
+        <CustomTextField fx:id="swingPasswordTextField" promptText="Swing Password"/>
         <HBox alignment="BOTTOM_RIGHT" prefHeight="100.0" prefWidth="200.0">
             <children>
                 <Button mnemonicParsing="false" onAction="#onSaveButtonClicked" text="Save"/>

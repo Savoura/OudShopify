@@ -35,7 +35,7 @@ public class StringOperatorV2 implements IFilterOperatorV2<String> {
             Type.NONE
             , Type.EQUALS
             , Type.CONTAINS
-                                                              );
+    );
 
     private final IFilterOperatorV2.Type type;
     private final String value;

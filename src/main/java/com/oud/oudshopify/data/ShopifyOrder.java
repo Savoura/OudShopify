@@ -15,7 +15,7 @@ public class ShopifyOrder {
     @SerializedName("fulfillment_status")
     private String fulFillmentStatus;
     private String name;
-    @SerializedName("total_price")
+    @SerializedName("current_total_price")
     private String totalPrice;
     private ShopifyCustomer customer;
 
@@ -37,8 +37,22 @@ public class ShopifyOrder {
     @SerializedName("fulfillments")
     private List<ShopifyFulfillment> fulfillment;
 
+    @SerializedName("financial_status")
+    private String financialStatus;
+
+    @SerializedName("refunds")
+    private List<ShopifyRefunds> refunds;
+
+    public boolean hasRefunds() {
+        return refunds != null && !refunds.isEmpty();
+    }
+
+    public boolean isPaid() {
+        return financialStatus.equalsIgnoreCase("paid");
+    }
+
     public boolean isConfirmed() {
-        return tagsContainAny(new String[]{"confirmed", "Confirmed", "Confirm", "confirm"});
+        return tagsContainAny(new String[] {"confirmed", "confirm", "Confirmed", "Confirm"});
     }
 
     public String getPhoneNumber() {
@@ -58,14 +72,14 @@ public class ShopifyOrder {
                 .collect(Collectors.toList());
     }
 
-    public boolean tagsContainAny(String[] searchTags)
-    {
-        for(String str : searchTags) {
-            if(getTagsFiltered().contains(str))
+    public boolean tagsContainAny(String[] searchTags) {
+        for (String str : searchTags) {
+            if (getTagsFiltered().contains(str))
                 return true;
         }
         return false;
     }
+
     public boolean tagsContain(String str) {
         return getTagsFiltered().contains(str);
     }

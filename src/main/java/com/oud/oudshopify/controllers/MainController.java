@@ -6,7 +6,6 @@ import com.oud.oudshopify.backend.network.Shopify;
 import com.oud.oudshopify.controllers.filterable.*;
 import com.oud.oudshopify.data.ShopifyItem;
 import com.oud.oudshopify.data.ShopifyOrder;
-import io.github.palexdev.materialfx.builders.control.CheckListBuilder;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -31,6 +30,8 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainController {
     @FXML
@@ -69,7 +70,7 @@ public class MainController {
         selectAll.setOnAction(evt -> {
             ordersTableView.getItems().forEach(
                     item -> pickedOrdersMap.put(item.getName(), selectAll.isSelected())
-                                              );
+            );
             ordersTableView.refresh();
             evt.consume();
         });
@@ -113,16 +114,45 @@ public class MainController {
         ordersTableView.setRowFactory(shopifyOrderTableView -> {
             TableRow<ShopifyOrder> tableRow = new TableRow<>();
             ContextMenu contextMenu = new ContextMenu();
-            MenuItem sendToBosta = new MenuItem("Send to Bosta");
-            sendToBosta.setOnAction(actionEvent -> System.out.println(ordersTableView.getSelectionModel()
-                    .getSelectedItem()));
-            MenuItem sendToShipBlu = new MenuItem("Send to ShipBlu");
-            sendToShipBlu.setOnAction(actionEvent -> System.out.println(ordersTableView.getSelectionModel()
-                    .getSelectedItem()));
-            contextMenu.getItems().addAll(sendToBosta, sendToShipBlu);
+            MenuItem sendToBosta = new MenuItem("Send to Swing");
+            sendToBosta.setOnAction(actionEvent -> {
+                try {
+                    showSwingUpload(ordersTableView.getSelectionModel()
+                            .getSelectedItem());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            contextMenu.getItems().add(sendToBosta);
             tableRow.setContextMenu(contextMenu);
             return tableRow;
         });
+    }
+
+    private void showSwingUpload(ShopifyOrder order) throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(Application.class.getResource("swing_form.fxml"));
+        Scene scene = new Scene(fxmlLoader.load());
+        Stage stage = new Stage();
+        stage.setTitle("Swing Upload Form");
+        SwingController controller = fxmlLoader.getController();
+        controller.setShopifyOrder(order);
+        controller.setOnUploadSuccededCallback(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (shopify.addTag(order, "سوينج")) {
+                        ordersTableView.refresh();
+                    }
+                } catch (URISyntaxException | IOException |
+                         InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+        controller.fillFields();
+        stage.setScene(scene);
+        stage.sizeToScene();
+        stage.showAndWait();
     }
 
     public void initialize() {
@@ -257,10 +287,9 @@ public class MainController {
         stringBuilder.append("Total Picked: ").append(totalPicked).append("\n");
         stringBuilder.append("Unconfirmed orders: ").append(unConfirmedOrders)
                 .append("\n");
-        for (Map.Entry<String, Integer> entry : countMap.entrySet()) {
-            stringBuilder.append(entry.getKey()).append(": ")
-                    .append(entry.getValue()).append("\n");
-        }
+
+        stringBuilder.append(buildOutput(countMap));
+
         StringSelection selection = new StringSelection(stringBuilder.toString());
         Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         clipboard.setContents(selection, selection);
@@ -270,6 +299,78 @@ public class MainController {
         alert.setContentText("Inventory Copied Successfully!");
         alert.initOwner(pane.getScene().getWindow());
         alert.show();
+    }
+
+
+    StringBuilder buildOutput(Map<String, Integer> countMap) {
+        StringBuilder stringBuilder = new StringBuilder();
+        int elements = countMap.size(), idx = 0;
+        String[][] output = new String[elements][4];
+        int maxPerfumeNameLength = 12;
+        int maxTypeLength = 4;
+        int maxBoxLength = 3;
+
+        // Build output array and find max lengths
+        for (Map.Entry<String, Integer> entry : countMap.entrySet()) {
+            output[idx] = buildStr(entry.getKey());
+            maxPerfumeNameLength = Math.max(maxPerfumeNameLength, output[idx][0].length());
+            maxTypeLength = Math.max(maxTypeLength, output[idx][1].length());
+            maxBoxLength = Math.max(maxBoxLength, output[idx][2].length());
+            output[idx][3] = String.valueOf(entry.getValue());
+            idx++;
+        }
+
+        // Append hyphens line
+        int totalLength = maxPerfumeNameLength + maxTypeLength + maxBoxLength + 26; // 26 = Length of static parts and separators
+        for (int i = 0; i < totalLength - 10; i++) {
+            stringBuilder.append("-");
+        }
+        stringBuilder.append("\n");
+
+        // Append header
+        stringBuilder.append(String.format("| %-" + maxPerfumeNameLength + "s | %-" + maxTypeLength + "s | %-" + maxBoxLength + "s | %-3s |\n", "Perfume Name", "Type", "Box", "Qty"));
+
+        // Append data
+        for (String[] item : output) {
+            stringBuilder.append(String.format("| %-" + maxPerfumeNameLength + "s | %-" + maxTypeLength + "s | %-" + maxBoxLength + "s | %-3s |\n", item[0], item[1], item[2], item[3]));
+            // Append hyphens line after each data line
+            for (int i = 0; i < totalLength - 10; i++) {
+                stringBuilder.append("-");
+            }
+            stringBuilder.append("\n");
+        }
+
+        return stringBuilder;
+    }
+
+    String[] buildStr(String inputStr) {
+        Pattern sizePattern = Pattern.compile("-?\\s?\\b\\d+\\s*(ml|ML|Ml)\\b");
+        inputStr = inputStr.replaceAll(sizePattern.pattern(), "");
+
+        // Replace "Eau de Parfum" with "EDP" and "Eau de Toilette" with "EDT"
+        inputStr = inputStr.replaceAll("\\b(Eau\\sde\\sParfum)\\b", "EDP");
+        inputStr = inputStr.replaceAll("\\b(Eau\\sDe\\sToilette)\\b", "EDT");
+
+        Pattern boxPattern = Pattern.compile("\\b(Origin(al)?|Outlet(\\sMaster\\sBox)?|Without\\sbox|Tester|Teaster|Without(\\sa\\sbox)?)\\b", Pattern.CASE_INSENSITIVE);
+        Pattern typePattern = Pattern.compile("\\b(EDT|EDP|Parfum|Le\\sParfum|Eau\\sFraiche|Deodorant|Intense)\\b", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = boxPattern.matcher(inputStr);
+        String[] output = new String[4];
+
+        if (matcher.find())
+            output[2] = matcher.group();
+        else
+            output[2] = " - ";
+        inputStr = inputStr.replaceAll(boxPattern.pattern(), "");
+        matcher = typePattern.matcher(inputStr);
+        if (matcher.find())
+            output[1] = matcher.group();
+        else
+            output[1] = " - ";
+
+        inputStr = inputStr.replaceAll(typePattern.pattern(), "");
+
+        output[0] = inputStr.split(" - ")[0];
+        return output;
     }
 
     private class TableTagsCell extends TableCell<ShopifyOrder, String> {

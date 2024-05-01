@@ -36,7 +36,7 @@ public class DateOperatorV2 implements IFilterOperatorV2<LocalDate> {
     public static final EnumSet<Type> VALID_TYPES = EnumSet.of(
             Type.NONE
             , Type.EQUALS, Type.SHOW_EMPTY
-                                                              );
+    );
 
     private final IFilterOperatorV2.Type type;
     private final LocalDate value;

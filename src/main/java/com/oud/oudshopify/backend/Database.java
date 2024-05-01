@@ -4,12 +4,30 @@ import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
 
+import java.io.File;
+
 public class Database {
-    private static final DB databaseImpl = DBMaker.fileDB("oud.db").fileMmapEnable().closeOnJvmShutdown().make();
-    private static Database database;
+    private static final String DB_FILE_NAME = "oud.db";
+    private static final DB databaseImpl;
 
     private Database() {
     }
+
+    static {
+        File dbFile = new File(DB_FILE_NAME);
+        if (!dbFile.exists()) {
+            createNewDatabaseFile();
+        }
+        databaseImpl = DBMaker.fileDB(DB_FILE_NAME).fileMmapEnable().closeOnJvmShutdown().make();
+    }
+
+    private static void createNewDatabaseFile() {
+        // Create a new database file
+        DB newDB = DBMaker.fileDB(DB_FILE_NAME).fileMmapEnable().closeOnJvmShutdown().make();
+        newDB.close();
+    }
+
+    private static Database database;
 
     public static synchronized Database getDatabase() {
         if (database == null)
@@ -26,4 +44,9 @@ public class Database {
         HTreeMap<String, String> document = (HTreeMap<String, String>) databaseImpl.hashMap(documentKey).createOrOpen();
         document.put(key, value);
     }
+
+    public void close() {
+        databaseImpl.close();
+    }
+
 }
